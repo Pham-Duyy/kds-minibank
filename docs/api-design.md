@@ -75,7 +75,7 @@ Response thành công (201):
 }
 ```
 
-Lỗi có thể gặp: `INVALID_AMOUNT`, `SOURCE_ACCOUNT_NOT_FOUND`, `DESTINATION_ACCOUNT_NOT_FOUND`, `INSUFFICIENT_BALANCE`, `ACCOUNT_ACCESS_DENIED`
+Lỗi có thể gặp: `INVALID_AMOUNT`, `SAME_ACCOUNT_TRANSFER`, `SOURCE_ACCOUNT_NOT_FOUND`, `DESTINATION_ACCOUNT_NOT_FOUND`, `INSUFFICIENT_BALANCE`, `ACCOUNT_ACCESS_DENIED`
 
 ### 3.2. Rút tiền
 
@@ -153,6 +153,7 @@ Response thành công (200): thông tin tài khoản sau khi cập nhật.
 |---|---|---|
 | INVALID_JSON | 400 | Body gửi lên không phải JSON hợp lệ |
 | INVALID_AMOUNT | 400 | Số tiền nhỏ hơn hoặc bằng 0 |
+| SAME_ACCOUNT_TRANSFER | 400 | Tài khoản gửi và tài khoản nhận trùng nhau |
 | UNAUTHENTICATED | 401 | Chưa đăng nhập hoặc token hết hạn |
 | ACCOUNT_ACCESS_DENIED | 403 | Người đăng nhập không có quyền với tài khoản này |
 | ACCOUNT_NOT_FOUND | 404 | Tài khoản không tồn tại |
@@ -174,6 +175,19 @@ Mẫu response lỗi:
 
 Quy tắc: không bao giờ trả stack trace hoặc thông tin bên trong server cho client.
 
-## 5. Câu hỏi còn mở
+## 5. Quyết định đã chốt
 
-- Chuyển tiền khi `fromAccountId` trùng `toAccountId` thì xử lý thế nào? Cần thêm mã lỗi không?
+### 5.1. Chuyển tiền cho chính tài khoản của mình
+
+**Vấn đề:** Khi `fromAccountId` trùng `toAccountId`, hệ thống xử lý như thế nào?
+
+**Quyết định:**
+
+- Không cho phép giao dịch chuyển tiền cho chính tài khoản của mình.
+- HTTP Status: `400 Bad Request`
+- errorCode: `SAME_ACCOUNT_TRANSFER`
+- Nhóm lỗi: Input Validation
+
+**Lý do:** Có thể phát hiện lỗi ngay từ request bằng cách so sánh `fromAccountId` và `toAccountId`, không cần truy vấn Database. Giao dịch này không tạo ra giá trị thực tế và có thể làm phát sinh lịch sử giao dịch không cần thiết.
+
+**Kết luận:** Backend cần kiểm tra tính hợp lệ của dữ liệu đầu vào trước khi thực hiện các bước xử lý nghiệp vụ tiếp theo.
